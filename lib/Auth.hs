@@ -12,7 +12,7 @@ getEnvWithCheck envName check = do
 getAPIKey :: IO(Either String String)
 getAPIKey = do
     -- todo: refine this code, I don't think it's a good way.
-    eitherKey <- getEnvWithCheck "API_KEY" null
+    eitherKey <- getEnvWithCheck "API_KEY" $ not . null
     case eitherKey of 
         Left x -> return $ error x
         Right x -> return $ Right x

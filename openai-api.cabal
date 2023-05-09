@@ -34,6 +34,10 @@ common common-depends
         , http-client
         , utf8-string
         , yaml
+        , conduit
+        , conduit-extra
+        , http-client-tls
+        , http-types
 library openai-api-lib
     import: common-depends
     exposed-modules:  

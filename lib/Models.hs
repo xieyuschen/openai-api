@@ -25,7 +25,7 @@ import Network.HTTP.Simple
 --     print $ getResponseHeader "Content-Type" response
 --     L8.putStrLn $ getResponseBody response
 
-data ModelResp = ModelResp {
+data MdeloResp = ModelResp {
     id :: String,
     object :: String,
     created :: Int,

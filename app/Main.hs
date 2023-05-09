@@ -11,7 +11,7 @@ import Data.ByteString.UTF8 as BSU  ( fromString )
 import Network.HTTP.Simple
     ( getResponseBody
       , getResponseHeader
-      , getResponseStatusCode
+      , getResponseStatus
       , httpJSON
       , setRequestMethod
       , setRequestPath
@@ -19,11 +19,19 @@ import Network.HTTP.Simple
       , setRequestPort
       , setRequestHost
       , Request
-      , Response, setRequestHeaders
+      , Response, setRequestHeaders,
+      defaultRequest
       )
-import Network.HTTP.Client (defaultRequest)
+
+import Network.HTTP.Client.TLS   (tlsManagerSettings)
+import           Network.HTTP.Client        (defaultManagerSettings, newManager, withResponse)
 import           Data.Aeson (Value )
 
+import           Data.Aeson.Parser           (json, value)
+import           Data.Conduit                (($$))
+import           Data.Conduit.Attoparsec     (sinkParser)
+import           Network.HTTP.Types.Status   (statusCode)
+import Network.HTTP.Client.Conduit(bodyReaderSource)
 main :: IO ()
 main = do
   eitherKey <- getAPIKey
@@ -35,13 +43,17 @@ main = do
           $ setRequestHost (fromString $ fromDomain defaultDomain)
           $ setRequestSecure True
           $ setRequestHeaders [("Content-Type", "application/json"),
-            ("Authentication", fromString $ "Bearer " ++ key) ]
+            ("Authorization", fromString $ "Bearer " ++ key) ]
           $ setRequestPort 443
           $ setRequestPath "v1/models" defaultRequest
   -- https://stackoverflow.com/questions/46694290/why-does-httpjson-fail-but-httplbs-succeeds
   -- `response <- httpJSON` request doesn't work
-  response <- httpJSON request :: IO ( Response ()) 
 
-  putStrLn $ "The status code was: " ++
-              show (getResponseStatusCode response)
-  print $ getResponseHeader "Content-Type" response
+  manager <- newManager tlsManagerSettings
+  withResponse request manager $ \response -> do
+        putStrLn $ "The status code was: " ++
+                show (statusCode $ getResponseStatus response)
+
+        value <- bodyReaderSource (getResponseBody response)
+              $$ sinkParser json
+        print value
