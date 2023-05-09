@@ -8,3 +8,4 @@ data ErrorResp = ErrorResp {
     param :: Int,
     code :: String
 } deriving (Show, Eq)
+

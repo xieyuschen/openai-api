@@ -38,13 +38,27 @@ common common-depends
         , conduit-extra
         , http-client-tls
         , http-types
+        , text
+        , vector
+    
+
 library openai-api-lib
     import: common-depends
     exposed-modules:  
         Auth
-        , Models
         , Conf
-    hs-source-dirs:   lib
+    hs-source-dirs:   OpenAI
+    default-language: Haskell2010
+    
+library openai 
+    import: common-depends
+    exposed-modules:  
+        OpenAI.Models.API
+        , OpenAI.Models.Data
+    build-depends:
+        openai-api-lib
+
+    hs-source-dirs:  . 
     default-language: Haskell2010
 
 executable api
@@ -53,5 +67,6 @@ executable api
     main-is:          Main.hs
     build-depends:
         openai-api-lib
+        , openai
     hs-source-dirs:   app
     default-language: Haskell2010
