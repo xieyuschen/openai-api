@@ -11,16 +11,38 @@ import GHC.Generics
 
 
 data ListResp = ListResp
-  {
-      lObject :: String,
+  {   lObject :: String,
       lData :: [Model]
-  } deriving (Generic, Show)
+  } deriving (Show)
 
 instance FromJSON ListResp where
   parseJSON = withObject "ListResp" $ \o ->
     ListResp
       <$> o .: "object"
       <*> o .: "data"
+
+data Model = Model
+  { mId :: Text,
+    mObject :: Text,
+    mCreated :: Integer,
+    mOwnedBy :: Text,
+    mPermission :: [ModelPermission],
+    mRoot :: Text,
+    mParent :: Maybe Text
+  }
+  deriving (Show)
+    
+instance FromJSON Model where
+  parseJSON = withObject "Model" $ \o ->
+    Model
+      <$> o .: "id"
+      <*> o .: "object"
+      <*> o .: "created"
+      <*> o .: "owned_by"
+      <*> o .: "permission"
+      <*> o .: "root"
+      <*> o .:? "parent"
+      
 
 data ModelPermission = ModelPermission
   { 
@@ -55,25 +77,3 @@ instance FromJSON ModelPermission where
       <*> o .:? "group"
       <*> o .: "is_blocking"
 
-data Model = Model
-  { mId :: Text,
-    mObject :: Text,
-    mCreated :: Integer,
-    mOwnedBy :: Text,
-    mPermission :: [ModelPermission],
-    mRoot :: Text,
-    mParent :: Maybe Text
-  }
-  deriving (Show)
-
-instance FromJSON Model where
-  parseJSON = withObject "Model" $ \o ->
-    Model
-      <$> o .: "id"
-      <*> o .: "object"
-      <*> o .: "created"
-      <*> o .: "owned_by"
-      <*> o .: "permission"
-      <*> o .: "root"
-      <*> o .:? "parent"
-      

@@ -40,6 +40,8 @@ common common-depends
         , http-types
         , text
         , vector
+        , transformers
+        , unliftio
     
 
 library openai-api-lib

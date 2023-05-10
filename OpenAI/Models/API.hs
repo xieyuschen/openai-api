@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module OpenAI.Models.API where
 import Conf ( defaultDomain, fromDomain )
 import Auth ( getAPIKey )
 
 import qualified Data.ByteString.Lazy.Char8 as S8
-import qualified Data.Yaml             as Yaml
 import Data.ByteString as BS
-import Data.ByteString.UTF8 as BSU  ( fromString )
+import Data.ByteString.UTF8 as BSU
+import Data.ByteString.Lazy.UTF8 as BLU
+
 import Network.HTTP.Simple
     ( getResponseBody
       , getResponseHeader
@@ -21,15 +23,11 @@ import Network.HTTP.Simple
       , setRequestHost
       , Request
       , Response, setRequestHeaders,
-      defaultRequest
+      defaultRequest, getResponseStatusCode
       )
 import Network.HTTP.Client.TLS   (tlsManagerSettings)
-import           Network.HTTP.Client        (defaultManagerSettings, newManager, withResponse)
-import           Data.Aeson.Parser           (json, value)
-import           Data.Conduit                (($$))
-import           Data.Conduit.Attoparsec     (sinkParser)
+import           Network.HTTP.Client        (defaultManagerSettings, newManager, withResponse, httpLbs, Response (responseBody))
 import           Network.HTTP.Types.Status   (statusCode)
-import Network.HTTP.Client.Conduit(bodyReaderSource)
 import Data.Aeson.Types
     ( (.:),
       FromJSON(parseJSON),
@@ -37,32 +35,39 @@ import Data.Aeson.Types
       KeyValue((.=)),
       ToJSON(toJSON),
       typeMismatch )
-
+import Control.Monad.Trans.Maybe
 import OpenAI.Models.Data
+import Data.Aeson (decode)
+import qualified Codec.Binary.UTF8.Generic as BS
+import Data.IORef
+import UnliftIO.Exception
 
-fn :: IO ()
-fn = do
+-- list :: MaybeT IO ListResp
+-- todo: refine the API to a better one
+listModels :: IO (Maybe ListResp)
+listModels = do
   eitherKey <- getAPIKey
 
   let Right key = eitherKey
   let request
           = setRequestMethod "GET"
-          $ setRequestHost (fromString $ fromDomain defaultDomain)
+          $ setRequestHost (BSU.fromString $ fromDomain defaultDomain)
           $ setRequestSecure True
           $ setRequestHeaders [("Content-Type", "application/json"),
-            ("Authorization", fromString $ "Bearer " ++ key) ]
+            ("Authorization", BSU.fromString $ "Bearer " ++ key) ]
           $ setRequestPort 443
           $ setRequestPath "v1/models" defaultRequest
 
   manager <- newManager tlsManagerSettings
-  withResponse request manager $ \response -> do
-        putStrLn $ "The status code was: " ++
-                show (statusCode $ getResponseStatus response)
-        value <- bodyReaderSource (getResponseBody response)
-              $$ sinkParser json
-        
-          case decode json of
-            Just (ListResp _ models) -> do
-              putStrLn "Models:"
-              mapM_ (putStrLn . modelToString) models
-            _ -> putStrLn "Error parsing JSON"
+  errorOrResp <- tryAny $ httpLbs request manager
+  case errorOrResp of
+    Left e -> do
+      print e
+      return Nothing
+    Right response -> do
+      if getResponseStatusCode response == 200
+        then do
+          let bodyStr = responseBody response
+          return $ Data.Aeson.decode bodyStr
+        else return Nothing
+
