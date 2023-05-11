@@ -68,6 +68,8 @@ library openai
     hs-source-dirs:  . 
     default-language: Haskell2010
 
+-- ignore the app/Main.hs but keep it now for temporary usage.
+-- todo: remove it in the future, add test cases for the library.
 executable api
     -- import should put before main-is field
     import: common-depends 
