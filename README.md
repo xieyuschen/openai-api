@@ -1,2 +1,2 @@
 # openai-api
-A haskell library provides out-of-box methods to interact with openai.
+A non-official Haskell library provides out-of-box methods to interact with openai.
