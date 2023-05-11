@@ -87,3 +87,31 @@ listModels = do
           logStringStdout <& ("Error: " ++ show (getResponseStatusCode response) ++ " " ++ show (responseBody response))
           return Nothing
 
+retrieveModel :: String -> IO (Maybe Model)
+retrieveModel modelID = do
+  ex <- runExceptT getAPIKey'
+  let Right key = ex
+  let request
+          = setRequestMethod "GET"
+          $ setRequestHost (BSU.fromString $ fromDomain defaultDomain)
+          $ setRequestSecure True
+          $ setRequestHeaders [("Content-Type", "application/json"),
+            ("Authorization", BSU.fromString $ "Bearer " ++ key) ]
+          $ setRequestPort 443
+          $ setRequestPath (BSU.fromString("v1/models/" ++ modelID)) defaultRequest
+
+  manager <- liftIO $ newManager tlsManagerSettings
+  errorOrResp <- liftIO $ tryAny $ httpLbs request manager
+  
+  case errorOrResp of
+    Left e -> do
+      logStringStderr <& ("Error: fail to send request " ++ show e)
+      return Nothing
+    Right response -> do
+      if getResponseStatusCode response == 200
+        then do
+          let bodyStr = responseBody response
+          return $ Data.Aeson.decode bodyStr
+        else do
+          logStringStdout <& ("Error: " ++ show (getResponseStatusCode response) ++ " " ++ show (responseBody response))
+          return Nothing 
