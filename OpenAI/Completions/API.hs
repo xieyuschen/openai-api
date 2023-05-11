@@ -9,7 +9,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
 
-module OpenAI.Chat.API where
+module OpenAI.Completions.API where
 import Conf ( defaultDomain, fromDomain )
 import Auth ( getAPIKey, getAPIKey' )
 
@@ -54,16 +54,17 @@ import Colog (log, logError, logWarning,
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (runExceptT)
 import OpenAI.Chat.Data ( ChatRequest (ChatRequest), Message (Message), exampleJson, ChatCompletion )
+import OpenAI.Completions.Data (ReqCompletions, Completions)
 
-chatCompletions :: ChatRequest -> IO (Maybe ChatCompletion)
-chatCompletions chatRequest = do
+completions :: ReqCompletions -> IO (Maybe Completions)
+completions req = do
   ex <- runExceptT getAPIKey'
   let Right key = ex
   let request
           = setRequestMethod "POST"
           $ setRequestBearerAuth (BSU.fromString key)          
-          $ setRequestPath (BSU.fromString "v1/chat/completions")
-          $ setRequestBodyJSON chatRequest baseRequest 
+          $ setRequestPath (BSU.fromString "v1/completions")
+          $ setRequestBodyJSON req baseRequest 
 
   manager <- liftIO $ newManager tlsManagerSettings
   errorOrResp <- liftIO $ tryAny $ httpLbs request manager
