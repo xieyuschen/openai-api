@@ -42,6 +42,7 @@ common common-depends
         , vector
         , transformers
         , unliftio
+        , co-log
     
 
 library openai-api-lib

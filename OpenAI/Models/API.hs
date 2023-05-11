@@ -1,10 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE InstanceSigs          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module OpenAI.Models.API where
 import Conf ( defaultDomain, fromDomain )
-import Auth ( getAPIKey )
+import Auth ( getAPIKey, getAPIKey' )
 
 import qualified Data.ByteString.Lazy.Char8 as S8
 import Data.ByteString as BS
@@ -39,16 +46,22 @@ import Control.Monad.Trans.Maybe
 import OpenAI.Models.Data
 import Data.Aeson (decode)
 import qualified Codec.Binary.UTF8.Generic as BS
-import Data.IORef
-import UnliftIO.Exception
 
--- list :: MaybeT IO ListResp
--- todo: refine the API to a better one
+import UnliftIO.Exception
+import Colog (log, logError, logWarning,
+    WithLog, Message, LogAction (unLogAction), logStringStdout, (<&), HasLog, richMessageAction,
+    pattern D, pattern I, pattern W, LoggerT (runLoggerT), pattern E, (&>), logStringStderr)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Reader
+import Colog.Monad (HasLog(getLogAction, setLogAction))
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans.Except (ExceptT)
+import Data.Functor ((<&>))
+
 listModels :: IO (Maybe ListResp)
 listModels = do
-  eitherKey <- getAPIKey
-
-  let Right key = eitherKey
+  ex <- runExceptT getAPIKey'
+  let Right key = ex
   let request
           = setRequestMethod "GET"
           $ setRequestHost (BSU.fromString $ fromDomain defaultDomain)
@@ -58,16 +71,19 @@ listModels = do
           $ setRequestPort 443
           $ setRequestPath "v1/models" defaultRequest
 
-  manager <- newManager tlsManagerSettings
-  errorOrResp <- tryAny $ httpLbs request manager
+  manager <- liftIO $ newManager tlsManagerSettings
+  errorOrResp <- liftIO $ tryAny $ httpLbs request manager
+  
   case errorOrResp of
     Left e -> do
-      print e
+      logStringStderr <& ("Error: fail to send request " ++ show e)
       return Nothing
     Right response -> do
       if getResponseStatusCode response == 200
         then do
           let bodyStr = responseBody response
           return $ Data.Aeson.decode bodyStr
-        else return Nothing
+        else do
+          logStringStdout <& ("Error: " ++ show (getResponseStatusCode response) ++ " " ++ show (responseBody response))
+          return Nothing
 
