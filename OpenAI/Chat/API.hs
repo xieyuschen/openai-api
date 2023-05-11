@@ -4,16 +4,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
-module OpenAI.Models.API where
+
+module OpenAI.Chat.API where
 import Conf ( defaultDomain, fromDomain )
 import Auth ( getAPIKey, getAPIKey' )
 
 import qualified Data.ByteString.Lazy.Char8 as S8
-import Data.ByteString as BS ()
-import Data.ByteString.UTF8 as BSU ( fromString )
-import Data.ByteString.Lazy.UTF8 as BLU ()
+import Data.ByteString as BS
+import Data.ByteString.UTF8 as BSU
+import Data.ByteString.Lazy.UTF8 as BLU
 import Req ( baseRequest )
 import Network.HTTP.Simple
     ( getResponseBody
@@ -27,7 +30,7 @@ import Network.HTTP.Simple
       , setRequestHost
       , Request
       , Response, setRequestHeaders,
-      defaultRequest, getResponseStatusCode, setRequestBearerAuth
+      defaultRequest, getResponseStatusCode, setRequestBearerAuth, setRequestBody, setRequestBodyJSON
       )
 import Network.HTTP.Client.TLS   (tlsManagerSettings)
 import           Network.HTTP.Client        (defaultManagerSettings, newManager, withResponse, httpLbs, Response (responseBody))
@@ -49,45 +52,18 @@ import Colog (log, logError, logWarning,
     WithLog, Message, LogAction (unLogAction), logStringStdout, (<&), HasLog, richMessageAction,
     pattern D, pattern I, pattern W, LoggerT (runLoggerT), pattern E, (&>), logStringStderr)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader ( MonadIO(liftIO) )
-import Colog.Monad (HasLog(getLogAction, setLogAction))
 import Control.Monad.Except (runExceptT)
-import Control.Monad.Trans.Except (ExceptT)
-import Data.Functor ((<&>))
+import OpenAI.Chat.Data ( ChatRequest (ChatRequest), Message (Message), exampleJson, ChatCompletion )
 
-listModels :: IO (Maybe ListResp)
-listModels = do
+chatCompletions :: IO (Maybe ChatCompletion)
+chatCompletions = do
   ex <- runExceptT getAPIKey'
   let Right key = ex
   let request
-          = setRequestMethod "GET"
-          $ setRequestBearerAuth (BSU.fromString key)
-          $ setRequestPath "v1/models" baseRequest 
-
-  manager <- liftIO $ newManager tlsManagerSettings
-  errorOrResp <- liftIO $ tryAny $ httpLbs request manager
-  
-  case errorOrResp of
-    Left e -> do
-      logStringStderr <& ("Error: fail to send request " ++ show e)
-      return Nothing
-    Right response -> do
-      if getResponseStatusCode response == 200
-        then do
-          let bodyStr = responseBody response
-          return $ Data.Aeson.decode bodyStr
-        else do
-          logStringStdout <& ("Error: " ++ show (getResponseStatusCode response) ++ " " ++ show (responseBody response))
-          return Nothing
-
-retrieveModel :: String -> IO (Maybe Model)
-retrieveModel modelID = do
-  ex <- runExceptT getAPIKey'
-  let Right key = ex
-  let request
-          = setRequestMethod "GET"
+          = setRequestMethod "POST"
           $ setRequestBearerAuth (BSU.fromString key)          
-          $ setRequestPath (BSU.fromString("v1/models/" ++ modelID)) baseRequest 
+          $ setRequestPath (BSU.fromString "v1/chat/completions")
+          $ setRequestBodyJSON exampleJson baseRequest 
 
   manager <- liftIO $ newManager tlsManagerSettings
   errorOrResp <- liftIO $ tryAny $ httpLbs request manager

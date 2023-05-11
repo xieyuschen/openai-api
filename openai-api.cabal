@@ -43,6 +43,7 @@ common common-depends
         , transformers
         , unliftio
         , co-log
+        , aeson-pretty
     
 
 library openai-api-lib
@@ -59,6 +60,8 @@ library openai
     exposed-modules:  
         OpenAI.Models.API
         , OpenAI.Models.Data
+        , OpenAI.Chat.API
+        , OpenAI.Chat.Data
     build-depends:
         openai-api-lib
 

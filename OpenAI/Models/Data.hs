@@ -4,7 +4,7 @@
 
 module OpenAI.Models.Data where
 
-import Data.Aeson
+import Data.Aeson ( FromJSON(parseJSON), (.:), (.:?), withObject )
 import Data.Text (Text)
 import qualified Data.Vector as V
 import GHC.Generics
