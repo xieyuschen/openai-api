@@ -103,7 +103,7 @@ instance FromJSON Usage where
       <*> o .: "total_tokens"
 
 data Choice = Choice
-  { choiceMessages :: RespMessage
+  { choiceMessage :: RespMessage
   , choiceFinishReason :: Text
   , choiceIndex :: Int
   } deriving Generic

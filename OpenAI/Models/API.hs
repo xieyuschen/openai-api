@@ -4,19 +4,16 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingStrategies    #-}
-{-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
-
 module OpenAI.Models.API where
 import Conf ( defaultDomain, fromDomain )
 import Auth ( getAPIKey, getAPIKey' )
 
 import qualified Data.ByteString.Lazy.Char8 as S8
-import Data.ByteString as BS
-import Data.ByteString.UTF8 as BSU
-import Data.ByteString.Lazy.UTF8 as BLU
+import Data.ByteString as BS ()
+import Data.ByteString.UTF8 as BSU ( fromString )
+import Data.ByteString.Lazy.UTF8 as BLU ()
 import Req ( baseRequest )
 import Network.HTTP.Simple
     ( getResponseBody
@@ -52,7 +49,7 @@ import Colog (log, logError, logWarning,
     WithLog, Message, LogAction (unLogAction), logStringStdout, (<&), HasLog, richMessageAction,
     pattern D, pattern I, pattern W, LoggerT (runLoggerT), pattern E, (&>), logStringStderr)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader
+import Control.Monad.Reader ( MonadIO(liftIO) )
 import Colog.Monad (HasLog(getLogAction, setLogAction))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Except (ExceptT)
