@@ -42,34 +42,6 @@ instance ToJSON ChatRequest where
   toJSON = genericToJSON defaultOptions
   toEncoding = genericToEncoding defaultOptions
 
-exampleJson :: ChatRequest
-exampleJson =
-  ChatRequest
-    { model = "gpt-3.5-turbo",
-      messages =
-        [ Message
-            { role = "user",
-              content = "Who won the world series in 2020?"
-            },
-          Message
-            { role = "assistant",
-              content = "The Los Angeles Dodgers won the World Series in 2020."
-            },
-          Message
-            { role = "user",
-              content = "Where was it played?"
-            }
-        ],
-      temperature = 1,
-      top_p = 1,
-      n = 1,
-      stream = False,
-      max_tokens = 250,
-      presence_penalty = 0,
-      frequency_penalty = 0
-    }
-
-
 data ChatCompletion = ChatCompletion
   { chatCompletionId :: Text
   , chatCompletionObject :: Text
