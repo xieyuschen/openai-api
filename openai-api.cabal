@@ -50,6 +50,7 @@ library openai-api-lib
     exposed-modules:  
         Auth
         , Conf
+        , Req
     hs-source-dirs:   OpenAI
     default-language: Haskell2010
     

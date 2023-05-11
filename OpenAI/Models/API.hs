@@ -17,7 +17,7 @@ import qualified Data.ByteString.Lazy.Char8 as S8
 import Data.ByteString as BS
 import Data.ByteString.UTF8 as BSU
 import Data.ByteString.Lazy.UTF8 as BLU
-
+import Req ( baseRequest )
 import Network.HTTP.Simple
     ( getResponseBody
       , getResponseHeader
@@ -30,7 +30,7 @@ import Network.HTTP.Simple
       , setRequestHost
       , Request
       , Response, setRequestHeaders,
-      defaultRequest, getResponseStatusCode
+      defaultRequest, getResponseStatusCode, setRequestBearerAuth
       )
 import Network.HTTP.Client.TLS   (tlsManagerSettings)
 import           Network.HTTP.Client        (defaultManagerSettings, newManager, withResponse, httpLbs, Response (responseBody))
@@ -64,12 +64,8 @@ listModels = do
   let Right key = ex
   let request
           = setRequestMethod "GET"
-          $ setRequestHost (BSU.fromString $ fromDomain defaultDomain)
-          $ setRequestSecure True
-          $ setRequestHeaders [("Content-Type", "application/json"),
-            ("Authorization", BSU.fromString $ "Bearer " ++ key) ]
-          $ setRequestPort 443
-          $ setRequestPath "v1/models" defaultRequest
+          $ setRequestBearerAuth (BSU.fromString key)
+          $ setRequestPath "v1/models" baseRequest 
 
   manager <- liftIO $ newManager tlsManagerSettings
   errorOrResp <- liftIO $ tryAny $ httpLbs request manager
@@ -93,12 +89,8 @@ retrieveModel modelID = do
   let Right key = ex
   let request
           = setRequestMethod "GET"
-          $ setRequestHost (BSU.fromString $ fromDomain defaultDomain)
-          $ setRequestSecure True
-          $ setRequestHeaders [("Content-Type", "application/json"),
-            ("Authorization", BSU.fromString $ "Bearer " ++ key) ]
-          $ setRequestPort 443
-          $ setRequestPath (BSU.fromString("v1/models/" ++ modelID)) defaultRequest
+          $ setRequestBearerAuth (BSU.fromString key)          
+          $ setRequestPath (BSU.fromString("v1/models/" ++ modelID)) baseRequest 
 
   manager <- liftIO $ newManager tlsManagerSettings
   errorOrResp <- liftIO $ tryAny $ httpLbs request manager
