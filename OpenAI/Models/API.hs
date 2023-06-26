@@ -43,7 +43,6 @@ import Control.Monad.Trans.Maybe
 import OpenAI.Models.Data
 import Data.Aeson (decode)
 import qualified Codec.Binary.UTF8.Generic as BS
-
 import UnliftIO.Exception
 import Colog (log, logError, logWarning,
     WithLog, Message, LogAction (unLogAction), logStringStdout, (<&), HasLog, richMessageAction,
@@ -53,7 +52,40 @@ import Control.Monad.Reader ( MonadIO(liftIO) )
 import Colog.Monad (HasLog(getLogAction, setLogAction))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Except (ExceptT)
-import Data.Functor ((<&>))
+import Prelude hiding (log)
+import Data.Text
+
+listModels' :: WithLog env Message IO => ExceptT String IO ListResp
+listModels' = do
+  envE <- liftIO $ runExceptT getAPIKey'
+  let Right envKey = envE
+  let request
+        = setRequestMethod "GET"
+        $ setRequestBearerAuth (BSU.fromString envKey)
+        $ setRequestPath "v1/models" baseRequest
+
+  log D (append "the request sent by list models api are: " $ pack $ show request)
+  manager <- liftIO $ newManager tlsManagerSettings
+  errorOrResp <- liftIO $ tryAny $ httpLbs request manager
+  case errorOrResp of
+    Left e -> do
+      log E $ append "fail to send request: " $ pack $ show e
+      fail "fail to send request"
+    Right response -> do
+      if getResponseStatusCode response == 200
+        then do
+          let dataM = Data.Aeson.decode $ responseBody response
+          case dataM of
+            Nothing -> do
+              log E $ append "non-200 response: " $ pack $ show $ getResponseStatusCode response
+              fail "non-200 response"
+            Just model -> 
+              return model
+        else do
+          log E $ append "non-200 response: " $ pack $ show $ getResponseStatusCode response
+          fail "non-200 response"
+
+
 
 listModels :: IO (Maybe ListResp)
 listModels = do
@@ -63,7 +95,6 @@ listModels = do
           = setRequestMethod "GET"
           $ setRequestBearerAuth (BSU.fromString key)
           $ setRequestPath "v1/models" baseRequest 
-
   manager <- liftIO $ newManager tlsManagerSettings
   errorOrResp <- liftIO $ tryAny $ httpLbs request manager
   
